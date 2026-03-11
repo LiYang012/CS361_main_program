@@ -12,11 +12,15 @@ public class TaskService {
 
     private final List<Task> tasks = new ArrayList<>();
     private int nextId = 1;
-    private final double weeklyCapacity = 40.0;
+
+    // 用户可修改的 workload threshold
+    private double weeklyCapacity = 40.0;
 
     public TaskService() {
         seedMockData();
     }
+
+    /* ---------------- Task CRUD ---------------- */
 
     public void addTask(String title, LocalDate deadline, double hours) {
         tasks.add(new Task(nextId++, title, deadline, hours));
@@ -50,8 +54,12 @@ public class TaskService {
                 .collect(Collectors.toList());
     }
 
+    /* ---------------- Workload Logic ---------------- */
+
     public double getTotalEstimatedHours() {
-        return tasks.stream().mapToDouble(Task::getEstimatedHours).sum();
+        return tasks.stream()
+                .mapToDouble(Task::getEstimatedHours)
+                .sum();
     }
 
     public int getTotalTaskCount() {
@@ -62,6 +70,14 @@ public class TaskService {
         return weeklyCapacity;
     }
 
+    public void updateWeeklyCapacity(double newCapacity) {
+        if (newCapacity > 0) {
+            this.weeklyCapacity = newCapacity;
+        }
+    }
+
+    /* ---------------- Mock Data ---------------- */
+
     private void seedMockData() {
         addTask("Homework", LocalDate.of(2026, 2, 1), 4);
         addTask("Sprint Report", LocalDate.of(2026, 2, 10), 6);
@@ -69,3 +85,4 @@ public class TaskService {
         addTask("Exam Prep", LocalDate.of(2026, 2, 28), 22);
     }
 }
+

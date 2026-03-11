@@ -34,7 +34,7 @@ public class TaskManagerApp {
                     System.out.println("   ██║   ██║  ██║███████║██║  ██╗");
                     System.out.println("   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n");
 
-                    System.out.println(" ▸ PLAN TASKS   ▸ TRACK WORKLOAD");
+                    System.out.println("   ▸ PLAN TASKS   ▸ TRACK WORKLOAD");
                     System.out.println("\n----------------------------------------");
                     System.out.println(" This app helps you manage tasks and");
                     System.out.println(" understand your workload.\n");
@@ -238,12 +238,36 @@ public class TaskManagerApp {
                     }
 
                     System.out.println("\n [D] View Detailed Breakdown");
+                    System.out.println(" [T] Update Workload Threshold");
                     System.out.println(" [B] Back to Main Menu");
 
                     switch (ui.readLine().toUpperCase()) {
                         case "D" -> state = AppState.WORKLOAD_DETAILED;
+                        case "T" -> state = AppState.UPDATE_THRESHOLD;
                         case "B" -> state = AppState.MAIN_MENU;
                     }
+                }
+
+                case UPDATE_THRESHOLD -> {
+                    System.out.println("----------------------------------------");
+                    System.out.println(" Update Workload Threshold");
+                    System.out.println("----------------------------------------");
+                    System.out.println(" Current weekly capacity: "
+                            + service.getWeeklyCapacity() + " hrs\n");
+
+                    System.out.print(" Enter new weekly capacity:\n > ");
+
+                    try {
+                        double newValue = Double.parseDouble(ui.readLine());
+                        service.updateWeeklyCapacity(newValue);
+                        System.out.println("\n Threshold updated successfully.");
+                    } catch (NumberFormatException e) {
+                        System.out.println("\n Invalid input. Threshold not changed.");
+                    }
+
+                    System.out.println("\n Press ENTER to return to Workload Summary.");
+                    ui.waitForEnter();
+                    state = AppState.WORKLOAD_BASIC;
                 }
 
                 case WORKLOAD_DETAILED -> {
@@ -262,8 +286,8 @@ public class TaskManagerApp {
 
                     System.out.println("\n Insight:");
                     if (total > service.getWeeklyCapacity()) {
-                        System.out.println(" You are overloaded by " +
-                                (total - service.getWeeklyCapacity()) + " hours.");
+                        System.out.println(" You are overloaded by "
+                                + (total - service.getWeeklyCapacity()) + " hours.");
                     } else {
                         System.out.println(" You are within your weekly capacity.");
                     }
@@ -282,4 +306,5 @@ public class TaskManagerApp {
         System.out.println("Goodbye!");
     }
 }
+
 

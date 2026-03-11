@@ -1,5 +1,6 @@
 package org.taskmanager.ui;
 
+
 public enum AppState {
     WELCOME,
     MAIN_MENU,
@@ -10,7 +11,9 @@ public enum AppState {
     CREATE_TASK,
     WORKLOAD_BASIC,
     WORKLOAD_DETAILED,
+    UPDATE_THRESHOLD,
     EXIT
 }
+
 
 
