@@ -14,4 +14,9 @@ public class Task {
     private final String title;
     private final LocalDate deadline;
     private final double estimatedHours;
+
+    // From Task Categorizer microservice
+    private final String taskCategory;   // Work / Personal
+
+    private final String timeCategory;   // Flexible / Rigid
 }

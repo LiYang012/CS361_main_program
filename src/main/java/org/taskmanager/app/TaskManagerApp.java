@@ -1,11 +1,16 @@
 package org.taskmanager.app;
 
-
 import org.taskmanager.model.Task;
 import org.taskmanager.service.TaskService;
 import org.taskmanager.ui.AppState;
 import org.taskmanager.ui.ConsoleUI;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -36,12 +41,6 @@ public class TaskManagerApp {
 
                     System.out.println("   ▸ PLAN TASKS   ▸ TRACK WORKLOAD");
                     System.out.println("\n----------------------------------------");
-                    System.out.println(" This app helps you manage tasks and");
-                    System.out.println(" understand your workload.\n");
-                    System.out.println(" How it works:");
-                    System.out.println("  Step 1: Create tasks with deadlines");
-                    System.out.println("  Step 2: View your task list");
-                    System.out.println("  Step 3: Review workload summary\n");
                     System.out.println(" Press ENTER to continue");
                     System.out.println("----------------------------------------");
 
@@ -73,19 +72,16 @@ public class TaskManagerApp {
                     System.out.println("----------------------------------------");
                     System.out.println(" Task List");
                     System.out.println("----------------------------------------");
-                    System.out.println(" How would you like to find your tasks?\n");
                     System.out.println(" [S] Search by keyword");
                     System.out.println(" [F] Filter by deadline");
                     System.out.println(" [V] View all tasks");
                     System.out.println(" [B] Back to Main Menu");
-                    System.out.println("----------------------------------------");
 
                     switch (ui.readLine().toUpperCase()) {
                         case "S" -> state = AppState.SEARCH_TASKS;
                         case "F" -> state = AppState.FILTER_TASKS;
                         case "V" -> state = AppState.VIEW_ALL_TASKS;
                         case "B" -> state = AppState.MAIN_MENU;
-                        default -> System.out.println(" Invalid option.");
                     }
                 }
 
@@ -100,28 +96,18 @@ public class TaskManagerApp {
 
                     if (results.isEmpty()) {
                         System.out.println("\n No matching tasks found.\n");
-                        System.out.println(" [S] Try another keyword");
-                        System.out.println(" [V] View all tasks");
-                        System.out.println(" [F] Filter by deadline");
-                        System.out.println(" [B] Back to Task List");
-
-                        switch (ui.readLine().toUpperCase()) {
-                            case "S" -> state = AppState.SEARCH_TASKS;
-                            case "V" -> state = AppState.VIEW_ALL_TASKS;
-                            case "F" -> state = AppState.FILTER_TASKS;
-                            case "B" -> state = AppState.TASK_LIST_HUB;
-                        }
                     } else {
                         ui.printTaskTable(results);
-                        System.out.println(" [S] Search again");
-                        System.out.println(" [V] View all tasks");
-                        System.out.println(" [B] Back to Task List");
+                    }
 
-                        switch (ui.readLine().toUpperCase()) {
-                            case "S" -> state = AppState.SEARCH_TASKS;
-                            case "V" -> state = AppState.VIEW_ALL_TASKS;
-                            case "B" -> state = AppState.TASK_LIST_HUB;
-                        }
+                    System.out.println(" [S] Search again");
+                    System.out.println(" [V] View all tasks");
+                    System.out.println(" [B] Back to Task List");
+
+                    switch (ui.readLine().toUpperCase()) {
+                        case "S" -> state = AppState.SEARCH_TASKS;
+                        case "V" -> state = AppState.VIEW_ALL_TASKS;
+                        case "B" -> state = AppState.TASK_LIST_HUB;
                     }
                 }
 
@@ -165,14 +151,10 @@ public class TaskManagerApp {
                     System.out.println("----------------------------------------");
                     ui.printTaskTable(service.getAllTasks());
 
-                    System.out.println(" [S] Search by keyword");
-                    System.out.println(" [F] Filter by deadline");
                     System.out.println(" [B] Back to Task List");
 
-                    switch (ui.readLine().toUpperCase()) {
-                        case "S" -> state = AppState.SEARCH_TASKS;
-                        case "F" -> state = AppState.FILTER_TASKS;
-                        case "B" -> state = AppState.TASK_LIST_HUB;
+                    if (ui.readLine().equalsIgnoreCase("B")) {
+                        state = AppState.TASK_LIST_HUB;
                     }
                 }
 
@@ -206,105 +188,166 @@ public class TaskManagerApp {
                         }
                     }
 
-                    service.addTask(title, deadline, hours);
+                    String taskCategory = "Personal";
+                    String timeCategory = "Flexible";
 
-                    System.out.println("\n [Enter] Save Task");
-                    System.out.println(" [C] Create Another Task");
-                    System.out.println(" [B] Back to Main Menu");
+                    try {
+                        String urlStr =
+                                "http://localhost:8001/categorize?title=" +
+                                        URLEncoder.encode(title, "UTF-8");
 
-                    switch (ui.readLine().toUpperCase()) {
-                        case "C" -> state = AppState.CREATE_TASK;
-                        case "B" -> state = AppState.MAIN_MENU;
-                        default -> state = AppState.MAIN_MENU;
-                    }
+                        URL url = new URL(urlStr);
+                        HttpURLConnection conn =
+                                (HttpURLConnection) url.openConnection();
+
+                        conn.setRequestMethod("GET");
+
+                        BufferedReader reader =
+                                new BufferedReader(
+                                        new InputStreamReader(conn.getInputStream()));
+
+                        StringBuilder response = new StringBuilder();
+                        String line;
+
+                        while ((line = reader.readLine()) != null) {
+                            response.append(line);
+                        }
+
+                        reader.close();
+
+                        String json = response.toString();
+
+                        if (json.contains("Work")) {
+                            taskCategory = "Work";
+                        }
+
+                        if (json.contains("Rigid")) {
+                            timeCategory = "Rigid";
+                        }
+
+                    } catch (Exception ignored) {}
+
+                    service.addTask(title, deadline, hours, taskCategory, timeCategory);
+
+                    System.out.println("\n Task saved.");
+                    System.out.println(" Press ENTER to return to menu.");
+                    ui.waitForEnter();
+
+                    state = AppState.MAIN_MENU;
                 }
 
                 case WORKLOAD_BASIC -> {
-                    double total = service.getTotalEstimatedHours();
 
-                    System.out.println("----------------------------------------");
-                    System.out.println(" Workload Summary (Basic)");
-                    System.out.println("----------------------------------------");
-                    System.out.println(" Total Tasks: " + service.getTotalTaskCount());
-                    System.out.println(" Total Estimated Hours: " + total);
-                    System.out.println(" Weekly Capacity: " + service.getWeeklyCapacity());
+                    List<Task> weeklyTasks = service.getTasksDueThisWeek();
 
-                    if (total > service.getWeeklyCapacity()) {
-                        System.out.println("\n Status: OVERLOADED ⚠️");
-                        System.out.println(" You may be overcommitted.");
-                        System.out.println(" Consider reducing or rescheduling tasks.");
-                    } else {
-                        System.out.println("\n Status: OK");
-                    }
+                    double weeklyHours = weeklyTasks.stream()
+                            .mapToDouble(Task::getEstimatedHours)
+                            .sum();
 
-                    System.out.println("\n [D] View Detailed Breakdown");
-                    System.out.println(" [T] Update Workload Threshold");
-                    System.out.println(" [B] Back to Main Menu");
-
-                    switch (ui.readLine().toUpperCase()) {
-                        case "D" -> state = AppState.WORKLOAD_DETAILED;
-                        case "T" -> state = AppState.UPDATE_THRESHOLD;
-                        case "B" -> state = AppState.MAIN_MENU;
-                    }
-                }
-
-                case UPDATE_THRESHOLD -> {
-                    System.out.println("----------------------------------------");
-                    System.out.println(" Update Workload Threshold");
-                    System.out.println("----------------------------------------");
-                    System.out.println(" Current weekly capacity: "
-                            + service.getWeeklyCapacity() + " hrs\n");
-
-                    System.out.print(" Enter new weekly capacity:\n > ");
+                    String status = "Not overloaded";
 
                     try {
-                        double newValue = Double.parseDouble(ui.readLine());
-                        service.updateWeeklyCapacity(newValue);
-                        System.out.println("\n Threshold updated successfully.");
-                    } catch (NumberFormatException e) {
-                        System.out.println("\n Invalid input. Threshold not changed.");
-                    }
+                        StringBuilder tasksParam = new StringBuilder();
 
-                    System.out.println("\n Press ENTER to return to Workload Summary.");
+                        for (Task t : weeklyTasks) {
+                            if (tasksParam.length() > 0) {
+                                tasksParam.append(",");
+                            }
+                            tasksParam.append(t.getEstimatedHours());
+                        }
+
+                        String urlStr =
+                                "http://localhost:8002/detect_overload?tasks=" + tasksParam;
+
+                        URL url = new URL(urlStr);
+                        HttpURLConnection conn =
+                                (HttpURLConnection) url.openConnection();
+
+                        conn.setRequestMethod("GET");
+
+                        BufferedReader reader =
+                                new BufferedReader(
+                                        new InputStreamReader(conn.getInputStream()));
+
+                        StringBuilder response = new StringBuilder();
+                        String line;
+
+                        while ((line = reader.readLine()) != null) {
+                            response.append(line);
+                        }
+
+                        reader.close();
+
+                        String json = response.toString();
+
+                        if (json.contains("Near overload")) {
+                            status = "Near overload";
+                        } else if (json.contains("Overloaded")) {
+                            status = "Overloaded";
+                        }
+
+                    } catch (Exception ignored) {}
+
+                    System.out.println("----------------------------------------");
+                    System.out.println(" Workload Summary");
+                    System.out.println("----------------------------------------");
+                    System.out.println(" Tasks Due This Week: " + weeklyTasks.size());
+                    System.out.println(" Hours This Week: " + weeklyHours);
+                    System.out.println(" Weekly Capacity: " + service.getWeeklyCapacity());
+                    System.out.println("\n Status: " + status);
+
+                    try {
+                        String body =
+                                "{"
+                                        + "\"status\":\"" + status + "\","
+                                        + "\"total_workload\":" + weeklyHours + ","
+                                        + "\"weekly_capacity\":" + service.getWeeklyCapacity() + ","
+                                        + "\"flexible_tasks\":" + service.countFlexibleTasks() + ","
+                                        + "\"rigid_tasks\":" + service.countRigidTasks() + ","
+                                        + "\"work_tasks\":" + service.countWorkTasks() + ","
+                                        + "\"personal_tasks\":" + service.countPersonalTasks()
+                                        + "}";
+
+                        URL url = new URL("http://localhost:8003/generate_recommendation");
+                        HttpURLConnection conn =
+                                (HttpURLConnection) url.openConnection();
+
+                        conn.setRequestMethod("POST");
+                        conn.setDoOutput(true);
+                        conn.setRequestProperty("Content-Type", "application/json");
+
+                        try (OutputStream os = conn.getOutputStream()) {
+                            os.write(body.getBytes());
+                            os.flush();
+                        }
+
+                        BufferedReader reader =
+                                new BufferedReader(
+                                        new InputStreamReader(conn.getInputStream()));
+
+                        StringBuilder response = new StringBuilder();
+                        String line;
+
+                        while ((line = reader.readLine()) != null) {
+                            response.append(line);
+                        }
+
+                        reader.close();
+
+                        System.out.println("\n Recommendation:");
+                        System.out.println(" " + response);
+
+                    } catch (Exception ignored) {}
+
+                    System.out.println("\n Press ENTER to return to Main Menu.");
                     ui.waitForEnter();
-                    state = AppState.WORKLOAD_BASIC;
+                    state = AppState.MAIN_MENU;
                 }
 
-                case WORKLOAD_DETAILED -> {
-                    double total = service.getTotalEstimatedHours();
-
-                    System.out.println("----------------------------------------");
-                    System.out.println(" Workload Summary (Detailed)");
-                    System.out.println("----------------------------------------");
-                    System.out.println(" Weekly Capacity: " + service.getWeeklyCapacity() + " hrs");
-                    System.out.println(" Total Estimated Hours: " + total + " hrs\n");
-
-                    for (Task t : service.getAllTasks()) {
-                        System.out.printf(" - %-20s %.1f hrs%n",
-                                t.getTitle(), t.getEstimatedHours());
-                    }
-
-                    System.out.println("\n Insight:");
-                    if (total > service.getWeeklyCapacity()) {
-                        System.out.println(" You are overloaded by "
-                                + (total - service.getWeeklyCapacity()) + " hours.");
-                    } else {
-                        System.out.println(" You are within your weekly capacity.");
-                    }
-
-                    System.out.println("\n [H] Hide Details (Back to Summary)");
-                    System.out.println(" [B] Back to Main Menu");
-
-                    switch (ui.readLine().toUpperCase()) {
-                        case "H" -> state = AppState.WORKLOAD_BASIC;
-                        case "B" -> state = AppState.MAIN_MENU;
-                    }
+                case EXIT -> {
+                    System.out.println("Goodbye!");
                 }
             }
         }
-
-        System.out.println("Goodbye!");
     }
 }
-
-

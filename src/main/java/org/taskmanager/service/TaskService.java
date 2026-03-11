@@ -1,6 +1,5 @@
 package org.taskmanager.service;
 
-
 import org.taskmanager.model.Task;
 
 import java.time.LocalDate;
@@ -13,7 +12,7 @@ public class TaskService {
     private final List<Task> tasks = new ArrayList<>();
     private int nextId = 1;
 
-    // 用户可修改的 workload threshold
+    // user-configurable weekly workload capacity
     private double weeklyCapacity = 40.0;
 
     public TaskService() {
@@ -22,8 +21,20 @@ public class TaskService {
 
     /* ---------------- Task CRUD ---------------- */
 
-    public void addTask(String title, LocalDate deadline, double hours) {
-        tasks.add(new Task(nextId++, title, deadline, hours));
+    public void addTask(String title,
+                        LocalDate deadline,
+                        double hours,
+                        String taskCategory,
+                        String timeCategory) {
+
+        tasks.add(new Task(
+                nextId++,
+                title,
+                deadline,
+                hours,
+                taskCategory,
+                timeCategory
+        ));
     }
 
     public List<Task> getAllTasks() {
@@ -76,13 +87,52 @@ public class TaskService {
         }
     }
 
+    /* ---------------- Weekly Tasks ---------------- */
+
+    public List<Task> getTasksDueThisWeek() {
+
+        LocalDate now = LocalDate.now();
+        LocalDate endOfWeek = now.plusDays(7);
+
+        return tasks.stream()
+                .filter(t -> !t.getDeadline().isAfter(endOfWeek))
+                .filter(t -> !t.getDeadline().isBefore(now))
+                .collect(Collectors.toList());
+    }
+
+    /* ---------------- Category Statistics ---------------- */
+
+    public long countFlexibleTasks() {
+        return tasks.stream()
+                .filter(t -> "Flexible".equalsIgnoreCase(t.getTimeCategory()))
+                .count();
+    }
+
+    public long countRigidTasks() {
+        return tasks.stream()
+                .filter(t -> "Rigid".equalsIgnoreCase(t.getTimeCategory()))
+                .count();
+    }
+
+    public long countWorkTasks() {
+        return tasks.stream()
+                .filter(t -> "Work".equalsIgnoreCase(t.getTaskCategory()))
+                .count();
+    }
+
+    public long countPersonalTasks() {
+        return tasks.stream()
+                .filter(t -> "Personal".equalsIgnoreCase(t.getTaskCategory()))
+                .count();
+    }
+
     /* ---------------- Mock Data ---------------- */
 
     private void seedMockData() {
-        addTask("Homework", LocalDate.of(2026, 2, 1), 4);
-        addTask("Sprint Report", LocalDate.of(2026, 2, 10), 6);
-        addTask("Group Project", LocalDate.of(2026, 2, 20), 10);
-        addTask("Exam Prep", LocalDate.of(2026, 2, 28), 22);
+
+        addTask("Homework", LocalDate.of(2026, 2, 1), 4, "Work", "Flexible");
+        addTask("Sprint Report", LocalDate.of(2026, 2, 10), 6, "Work", "Rigid");
+        addTask("Group Project", LocalDate.of(2026, 2, 20), 10, "Work", "Flexible");
+        addTask("Exam Prep", LocalDate.of(2026, 2, 28), 22, "Work", "Flexible");
     }
 }
-
